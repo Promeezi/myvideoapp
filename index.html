@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Video Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Video container aspect ratio */
+        .video-container {
+            aspect-ratio: 16/9;
+        }
+        
+        /* Custom file input button */
+        .file-input {
+            opacity: 0;
+            position: absolute;
+            z-index: -1;
+        }
+        
+        /* Smooth transitions */
+        .transition-slow {
+            transition: all 0.5s ease;
+        }
+        
+        /* Glow effect */
+        .glow {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8">
+            <div class="flex items-center mb-4 md:mb-0">
+                <i class="fas fa-film text-blue-400 text-3xl mr-3"></i>
+                <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                    Local Video Player
+                </h1>
+            </div>
+            
+            <div class="relative">
+                <label for="video-upload" class="cursor-pointer flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-slow glow hover:glow">
+                    <i class="fas fa-upload mr-2"></i>
+                    <span>Upload Video</span>
+                </label>
+                <input type="file" id="video-upload" class="file-input" accept="video/*">
+            </div>
+        </header>
+        
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Main Video Player -->
+            <main class="flex-1">
+                <div class="bg-gray-800 rounded-xl overflow-hidden shadow-xl">
+                    <!-- Video Container -->
+                    <div class="video-container w-full bg-black relative">
+                        <video id="video-player" class="w-full h-full" controls></video>
+                        
+                        <!-- Placeholder when no video is selected -->
+                        <div id="video-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 p-4 text-center">
+                            <i class="fas fa-video text-gray-500 text-5xl mb-4"></i>
+                            <h3 class="text-xl font-semibold text-gray-300 mb-2">No Video Selected</h3>
+                            <p class="text-gray-500 max-w-md">Upload a video file from your device to start watching</p>
+                            <label for="video-upload" class="mt-4 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-slow">
+                                <i class="fas fa-upload mr-2"></i>
+                                Select Video
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Video Info -->
+                    <div id="video-info" class="p-4 hidden">
+                        <h2 id="video-title" class="text-xl font-bold mb-2 truncate">Video Title</h2>
+                        <div class="flex flex-wrap gap-4 text-sm text-gray-400">
+                            <div class="flex items-center">
+                                <i class="fas fa-clock mr-2"></i>
+                                <span id="video-duration">00:00</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-expand mr-2"></i>
+                                <span id="video-resolution">0x0</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file mr-2"></i>
+                                <span id="video-size">0 MB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Playback Controls -->
+                <div class="mt-4 bg-gray-800 rounded-xl p-4 shadow-xl">
+                    <div class="flex flex-col space-y-4">
+                        <div class="flex items-center justify-between">
+                            <button id="play-btn" class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full transition-slow">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            
+                            <div class="flex items-center space-x-4">
+                                <button id="rewind-btn" class="text-gray-300 hover:text-white p-2 rounded-full transition-slow">
+                                    <i class="fas fa-backward"></i>
+                                </button>
+                                <button id="forward-btn" class="text-gray-300 hover:text-white p-2 rounded-full transition-slow">
+                                    <i class="fas fa-forward"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2">
+                                <button id="volume-btn" class="text-gray-300 hover:text-white p-2 rounded-full transition-slow">
+                                    <i class="fas fa-volume-up"></i>
+                                </button>
+                                <input id="volume-slider" type="range" min="0" max="1" step="0.1" value="1" class="w-24 accent-blue-500">
+                            </div>
+                            
+                            <button id="fullscreen-btn" class="text-gray-300 hover:text-white p-2 rounded-full transition-slow">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center space-x-2">
+                            <span id="current-time" class="text-sm text-gray-400">00:00</span>
+                            <input id="progress-bar" type="range" min="0" max="100" value="0" class="flex-1 h-2 bg-gray-600 rounded-full appearance-none accent-blue-500">
+                            <span id="total-time" class="text-sm text-gray-400">00:00</span>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            
+            <!-- Video Library Sidebar -->
+            <aside class="w-full lg:w-80 bg-gray-800 rounded-xl p-4 shadow-xl h-fit">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold flex items-center">
+                        <i class="fas fa-folder-open mr-2 text-blue-400"></i>
+                        Video Library
+                    </h2>
+                    <span id="video-count" class="bg-gray-700 text-xs px-2 py-1 rounded">0 videos</span>
+                </div>
+                
+                <div id="video-list" class="space-y-2 max-h-96 overflow-y-auto pr-2">
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-box-open text-3xl mb-2"></i>
+                        <p>Your video library is empty</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-gray-700">
+                    <button id="clear-library" class="w-full text-red-400 hover:text-red-300 flex items-center justify-center transition-slow">
+                        <i class="fas fa-trash mr-2"></i>
+                        Clear Library
+                    </button>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const videoPlayer = document.getElementById('video-player');
+            const videoPlaceholder = document.getElementById('video-placeholder');
+            const videoInfo = document.getElementById('video-info');
+            const videoTitle = document.getElementById('video-title');
+            const videoDuration = document.getElementById('video-duration');
+            const videoResolution = document.getElementById('video-resolution');
+            const videoSize = document.getElementById('video-size');
+            const videoUpload = document.getElementById('video-upload');
+            const videoList = document.getElementById('video-list');
+            const videoCount = document.getElementById('video-count');
+            const playBtn = document.getElementById('play-btn');
+            const rewindBtn = document.getElementById('rewind-btn');
+            const forwardBtn = document.getElementById('forward-btn');
+            const volumeBtn = document.getElementById('volume-btn');
+            const volumeSlider = document.getElementById('volume-slider');
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            const progressBar = document.getElementById('progress-bar');
+            const currentTime = document.getElementById('current-time');
+            const totalTime = document.getElementById('total-time');
+            const clearLibrary = document.getElementById('clear-library');
+            
+            // Store videos in localStorage
+            let videos = JSON.parse(localStorage.getItem('videos')) || [];
+            
+            // Update video library display
+            function updateVideoLibrary() {
+                videoList.innerHTML = '';
+                
+                if (videos.length === 0) {
+                    videoList.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-box-open text-3xl mb-2"></i>
+                            <p>Your video library is empty</p>
+                        </div>
+                    `;
+                    videoCount.textContent = '0 videos';
+                    return;
+                }
+                
+                videoCount.textContent = `${videos.length} ${videos.length === 1 ? 'video' : 'videos'}`;
+                
+                videos.forEach((video, index) => {
+                    const videoItem = document.createElement('div');
+                    videoItem.className = 'flex items-center p-2 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition-slow';
+                    videoItem.innerHTML = `
+                        <div class="flex-shrink-0 w-12 h-12 bg-gray-600 rounded flex items-center justify-center mr-3">
+                            <i class="fas fa-video text-gray-400"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-sm font-medium truncate">${video.name}</h3>
+                            <p class="text-xs text-gray-400">${formatFileSize(video.size)}</p>
+                        </div>
+                        <button class="text-red-400 hover:text-red-300 ml-2 p-1 rounded-full transition-slow delete-video" data-index="${index}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    
+                    videoItem.addEventListener('click', () => loadVideo(video));
+                    
+                    videoList.appendChild(videoItem);
+                });
+            }
+            
+            // Format time (seconds to MM:SS)
+            function formatTime(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = Math.floor(seconds % 60);
+                return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+            }
+            
+            // Format file size (bytes to KB/MB)
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                else return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+            
+            // Load video into player
+            function loadVideo(video) {
+                const videoUrl = URL.createObjectURL(video.file);
+                videoPlayer.src = videoUrl;
+                
+                videoPlayer.onloadedmetadata = function() {
+                    videoPlaceholder.classList.add('hidden');
+                    videoInfo.classList.remove('hidden');
+                    
+                    videoTitle.textContent = video.name;
+                    videoDuration.textContent = formatTime(videoPlayer.duration);
+                    videoResolution.textContent = `${videoPlayer.videoWidth}x${videoPlayer.videoHeight}`;
+                    videoSize.textContent = formatFileSize(video.size);
+                    totalTime.textContent = formatTime(videoPlayer.duration);
+                    
+                    // Auto-play the video
+                    videoPlayer.play();
+                    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                };
+            }
+            
+            // Handle file upload
+            videoUpload.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                // Check if video already exists in library
+                const existingVideo = videos.find(v => v.name === file.name && v.size === file.size);
+                if (existingVideo) {
+                    loadVideo(existingVideo);
+                    return;
+                }
+                
+                const video = {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    file: file,
+                    lastPlayed: new Date().toISOString()
+                };
+                
+                videos.unshift(video); // Add to beginning of array
+                localStorage.setItem('videos', JSON.stringify(videos));
+                updateVideoLibrary();
+                loadVideo(video);
+                
+                // Reset file input
+                e.target.value = '';
+            });
+            
+            // Play/Pause button
+            playBtn.addEventListener('click', function() {
+                if (videoPlayer.paused) {
+                    videoPlayer.play();
+                    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                } else {
+                    videoPlayer.pause();
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                }
+            });
+            
+            // Rewind 10 seconds
+            rewindBtn.addEventListener('click', function() {
+                videoPlayer.currentTime -= 10;
+            });
+            
+            // Forward 10 seconds
+            forwardBtn.addEventListener('click', function() {
+                videoPlayer.currentTime += 10;
+            });
+            
+            // Volume control
+            volumeSlider.addEventListener('input', function() {
+                videoPlayer.volume = this.value;
+                if (this.value == 0) {
+                    volumeBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                } else if (this.value < 0.5) {
+                    volumeBtn.innerHTML = '<i class="fas fa-volume-down"></i>';
+                } else {
+                    volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                }
+            });
+            
+            // Toggle mute
+            volumeBtn.addEventListener('click', function() {
+                if (videoPlayer.volume > 0) {
+                    videoPlayer.volume = 0;
+                    volumeSlider.value = 0;
+                    volumeBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                } else {
+                    videoPlayer.volume = 1;
+                    volumeSlider.value = 1;
+                    volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                }
+            });
+            
+            // Fullscreen toggle
+            fullscreenBtn.addEventListener('click', function() {
+                if (!document.fullscreenElement) {
+                    videoPlayer.requestFullscreen().catch(err => {
+                        alert(`Error attempting to enable fullscreen: ${err.message}`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+            
+            // Update progress bar
+            videoPlayer.addEventListener('timeupdate', function() {
+                const progress = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+                progressBar.value = progress;
+                currentTime.textContent = formatTime(videoPlayer.currentTime);
+            });
+            
+            // Seek video when progress bar is changed
+            progressBar.addEventListener('input', function() {
+                const seekTime = (this.value / 100) * videoPlayer.duration;
+                videoPlayer.currentTime = seekTime;
+            });
+            
+            // Clear video library
+            clearLibrary.addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear your video library?')) {
+                    videos = [];
+                    localStorage.removeItem('videos');
+                    updateVideoLibrary();
+                    
+                    // Reset player
+                    videoPlayer.src = '';
+                    videoPlaceholder.classList.remove('hidden');
+                    videoInfo.classList.add('hidden');
+                }
+            });
+            
+            // Delete single video
+            videoList.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-video') || e.target.closest('.delete-video')) {
+                    e.stopPropagation();
+                    const button = e.target.classList.contains('delete-video') ? e.target : e.target.closest('.delete-video');
+                    const index = parseInt(button.dataset.index);
+                    
+                    if (confirm('Are you sure you want to remove this video from your library?')) {
+                        videos.splice(index, 1);
+                        localStorage.setItem('videos', JSON.stringify(videos));
+                        updateVideoLibrary();
+                        
+                        // If the deleted video was the one currently playing
+                        if (videoPlayer.src && index === 0) {
+                            videoPlayer.src = '';
+                            videoPlaceholder.classList.remove('hidden');
+                            videoInfo.classList.add('hidden');
+                        }
+                    }
+                }
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                if (e.target.tagName === 'INPUT') return; // Ignore if typing in an input
+                
+                switch (e.key) {
+                    case ' ':
+                        // Spa
